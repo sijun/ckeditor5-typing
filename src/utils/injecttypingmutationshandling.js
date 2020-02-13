@@ -147,8 +147,9 @@ class MutationHandler {
 		// Replace non-texts with any character. This is potentially dangerous but passes in manual tests. The thing is
 		// that we need to take care of proper indexes so we cannot simply remove non-text elements from the content.
 		// By inserting a character we keep all the real texts on their indexes.
-		const newText = modelFromDomChildren.map( item => item.is( 'text' ) ? item.data : '@' ).join( '' ).replace( /\u00A0/g, ' ' );
-		const oldText = currentModelChildren.map( item => item.is( 'text' ) ? item.data : '@' ).join( '' ).replace( /\u00A0/g, ' ' );
+		const isComposing = this.editor.editing.view.document.isComposing;
+		const newText = isComposing ? modelFromDomChildren.map( item => item.is( 'text' ) ? item.data : '@' ).join( '' ) : modelFromDomChildren.map( item => item.is( 'text' ) ? item.data : '@' ).join( '' ).replace( /\u00A0/g, ' ' );
+		const oldText = isComposing ? currentModelChildren.map( item => item.is( 'text' ) ? item.data : '@' ).join( '' ) : currentModelChildren.map( item => item.is( 'text' ) ? item.data : '@' ).join( '' ).replace( /\u00A0/g, ' ' );
 
 		// Do nothing if mutations created same text.
 		if ( oldText === newText ) {
@@ -196,9 +197,11 @@ class MutationHandler {
 		// take `newText` and compare it to (cleaned up) view.
 		// It could also be done in mutation observer too, however if any outside plugin would like to
 		// introduce additional events for mutations, they would get already cleaned up version (this may be good or not).
-		const newText = mutation.newText.replace( /\u00A0/g, ' ' );
+		const isComposing = this.editor.editing.view.document.isComposing;
+
+		const newText = isComposing ? mutation.newText : mutation.newText.replace( /\u00A0/g, ' ' );
 		// To have correct `diffResult`, we also compare view node text data with &nbsp; replaced by space.
-		const oldText = mutation.oldText.replace( /\u00A0/g, ' ' );
+		const oldText = isComposing ? mutation.oldText : mutation.oldText.replace( /\u00A0/g, ' ' );
 
 		// Do nothing if mutations created same text.
 		if ( oldText === newText ) {
@@ -241,13 +244,14 @@ class MutationHandler {
 		const viewPos = this.editing.view.createPositionAt( mutation.node, change.index );
 		const modelPos = this.editing.mapper.toModelPosition( viewPos );
 		const insertedText = change.values[ 0 ].data;
+		const isComposing = this.editor.editing.view.document.isComposing;
 
 		this.editor.execute( 'input', {
 			// Replace &nbsp; inserted by the browser with normal space.
 			// See comment in `_handleTextMutation`.
 			// In this case we don't need to do this before `diff` because we diff whole nodes.
 			// Just change &nbsp; in case there are some.
-			text: insertedText.replace( /\u00A0/g, ' ' ),
+			text: isComposing ? insertedText : insertedText.replace( /\u00A0/g, ' ' ),
 			range: this.editor.model.createRange( modelPos )
 		} );
 	}
